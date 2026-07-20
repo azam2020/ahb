@@ -1,1 +1,375 @@
-ff
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMBA AHB Protocol | Interview Prep Guide</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            position: relative;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .navbar {
+            background-color: #0d6efd;
+        }
+        .navbar-brand, .nav-link {
+            color: #fff !important;
+        }
+        .sidebar {
+            position: sticky;
+            top: 5rem;
+            height: calc(100vh - 6rem);
+            overflow-y: auto;
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+            color: white !important;
+            border-radius: 5px;
+        }
+        .nav-pills .nav-link {
+            color: #495057 !important;
+            font-weight: 500;
+        }
+        .content-section {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+        }
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 1.5rem;
+        }
+        .table thead {
+            background-color: #f1f3f5;
+        }
+        .diagram-placeholder {
+            background-color: #e9ecef;
+            border: 2px dashed #adb5bd;
+            padding: 2rem;
+            text-align: center;
+            color: #6c757d;
+            font-weight: bold;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .highlight-box {
+            background-color: #e7f1ff;
+            border-left: 4px solid #0d6efd;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body data-bs-spy="scroll" data-bs-target="#toc-sidebar" data-bs-smooth-scroll="true" tabindex="0">
+
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="index.html">AHB Protocol Docs</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="index.html">Theory & Concepts</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="code.html">RTL Code & Testbench</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container mt-4">
+        <div class="row">
+            
+            <!-- Sidebar / Table of Contents -->
+            <div class="col-lg-3 d-none d-lg-block">
+                <div class="sidebar" id="toc-sidebar">
+                    <h5 class="fw-bold mb-3">Contents</h5>
+                    <nav class="nav nav-pills flex-column">
+                        <a class="nav-link" href="#introduction">1. Introduction</a>
+                        <a class="nav-link" href="#architecture">2. System Architecture</a>
+                        <a class="nav-link" href="#signals">3. Key Signals</a>
+                        <a class="nav-link" href="#transfers">4. Basic Transfers</a>
+                        <a class="nav-link" href="#htrans">5. Transfer Types (HTRANS)</a>
+                        <a class="nav-link" href="#bursts">6. Burst Operations (HBURST)</a>
+                        <a class="nav-link" href="#response">7. Subordinate Response</a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="col-lg-9">
+                
+                <!-- Section 1: Introduction -->
+                <section id="introduction" class="content-section">
+                    <h1>1. Introduction to AMBA AHB</h1>
+                    <p>The Advanced Microcontroller Bus Architecture (AMBA) is a set of specifications developed by ARM to standardize communication between different functional blocks of a System-on-Chip (SoC)[cite: 1].</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 shadow-sm border-0">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">On-Chip Protocols</h5>
+                                    <p class="card-text">Act as ultra-fast internal highways connecting the CPU and memory inside a single silicon chip[cite: 1]. They focus on moving massive amounts of data instantly over microscopic distances[cite: 1]. Examples include AHB and AXI[cite: 1].</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 shadow-sm border-0">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success">Peripheral Protocols</h5>
+                                    <p class="card-text">Act as external bridges connecting the main chip to outside components like sensors and screens[cite: 1]. They focus on using fewer wires to reliably send data across the physical circuit board[cite: 1]. Examples include I2C, SPI, and USB[cite: 1].</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="mt-4">AMBA Family Protocols[cite: 1]</h3>
+                    <ul>
+                        <li><strong>AHB (Advanced High-performance Bus):</strong> Designed for high-speed, high-bandwidth communication[cite: 1]. It features single clock-edge operation, burst transfers, and a pipelined structure[cite: 1].</li>
+                        <li><strong>APB (Advanced Peripheral Bus):</strong> Used for connecting low-power, low-bandwidth peripheral devices[cite: 1]. A bridge is required to convert AHB signals to APB signals[cite: 1].</li>
+                        <li><strong>AXI (Advanced eXtensible Interface):</strong> Used for high-performance, low-latency, and high-bandwidth applications[cite: 1].</li>
+                    </ul>
+                </section>
+
+                <!-- Section 2: Architecture -->
+                <section id="architecture" class="content-section">
+                    <h1>2. AHB System Components</h1>
+                    <p>The AHB protocol defines the interaction between three main components communicating via a bus (a bundle of signals)[cite: 1]. Role assignment is not permanent; roles can be interchanged as transactions change[cite: 1].</p>
+
+                    <div class="diagram-placeholder">
+                        [Insert Diagram: Master, Interconnect/Bus, and Slave connected via bundle of signals]
+                    </div>
+
+                    <ol>
+                        <li><strong>Managers (Masters):</strong> Initiate transactions by issuing read and write commands[cite: 1]. They provide the address, control signals, and data during operations[cite: 1]. To avoid conflicts, only one Manager can control the bus at a time[cite: 1].</li>
+                        <li><strong>Subordinates (Slaves):</strong> Respond to the Manager's requests based on the provided address[cite: 1]. Subordinates include memories, peripherals, and bridges (like AHB-to-APB bridges)[cite: 1]. If the manager sends an address that doesn't match any subordinate, the response is invalid[cite: 1].</li>
+                        <li><strong>Interconnects (Decoders/Multiplexors):</strong> Handle data routing and arbitration[cite: 1]. A decoder selects the appropriate slave (via <code>HSEL</code> signals) based on the address provided by the Master[cite: 1].</li>
+                    </ol>
+                </section>
+
+                <!-- Section 3: Signals -->
+                <section id="signals" class="content-section">
+                    <h1>3. Key AHB Signals</h1>
+                    <p>AHB operates synchronously on the rising edge of the clock, ensuring predictable timing[cite: 1].</p>
+
+                    <table class="table table-bordered table-hover mt-3">
+                        <thead>
+                            <tr>
+                                <th>Signal Group</th>
+                                <th>Signal Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td rowspan="2" class="align-middle"><strong>Global Signals</strong>[cite: 1]</td>
+                                <td><code>HCLK</code></td>
+                                <td>System clock. All signal timings are related to the rising edge of HCLK[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HRESETn</code></td>
+                                <td>Active-low reset signal. 0 implies reset, 1 implies no reset[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="5" class="align-middle"><strong>Address & Control</strong>[cite: 1]</td>
+                                <td><code>HADDR[31:0]</code></td>
+                                <td>Address bus carrying the memory or peripheral address to read from or write to[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HWRITE</code></td>
+                                <td>Indicates direction. 1 = Write operation (Master to Slave), 0 = Read operation (Slave to Master)[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HSIZE[2:0]</code></td>
+                                <td>Defines the size of the data item/packet[cite: 1]. Must be less than or equal to the data bus width[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HBURST[2:0]</code></td>
+                                <td>Defines the burst mode (single, incrementing, or wrapping) and the number of data transfers in a single burst[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HTRANS[1:0]</code></td>
+                                <td>Indicates the transfer type (IDLE, BUSY, NONSEQ, SEQ)[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" class="align-middle"><strong>Data Buses</strong>[cite: 1]</td>
+                                <td><code>HWDATA[31:0]</code></td>
+                                <td>Write data bus driven by the Master during write operations[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HRDATA[31:0]</code></td>
+                                <td>Read data bus driven by the Slave during read operations[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" class="align-middle"><strong>Transfer Response</strong>[cite: 1]</td>
+                                <td><code>HREADY</code></td>
+                                <td>Input for Master, Output from Slave[cite: 1]. 1 = Slave is ready, 0 = Slave not ready (wait state)[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>HRESP</code></td>
+                                <td>Status of the transaction. 0 = OKAY, 1 = ERROR[cite: 1].</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="highlight-box">
+                        <strong>Note on HSIZE[cite: 1]:</strong>
+                        <ul>
+                            <li><code>3'b000</code>: 8 bits (Byte)[cite: 1]</li>
+                            <li><code>3'b001</code>: 16 bits (Half Word)[cite: 1]</li>
+                            <li><code>3'b010</code>: 32 bits (Word)[cite: 1]</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Section 4: Basic Transfers -->
+                <section id="transfers" class="content-section">
+                    <h1>4. Basic Transfers & Phases</h1>
+                    <p>The AHB is a pipelined protocol[cite: 1]. A basic transfer consists of two distinct phases[cite: 1]:</p>
+                    
+                    <ol>
+                        <li><strong>Address Phase (1st cycle):</strong> Lasts for a single HCLK cycle[cite: 1]. All control signals must be valid, and the address of the first packet is provided[cite: 1].</li>
+                        <li><strong>Data Phase (2nd cycle):</strong> The master goes to read or write the data[cite: 1]. This phase might require several HCLK cycles; the <code>HREADY</code> signal is used to control the number of clock cycles needed to complete the transfer[cite: 1].</li>
+                    </ol>
+
+                    <div class="diagram-placeholder">
+                        [Insert Timing Diagram: Pipelined Address and Data Phases]
+                    </div>
+
+                    <h3>Wait States (HREADY)</h3>
+                    <p>The master checks the readiness of the slave[cite: 1]. If <code>HREADY = 0</code>, the slave is not ready, and the master must insert a wait state[cite: 1]. The data phase is extended[cite: 1].</p>
+                    <ul>
+                        <li><strong>Read Transfer Wait:</strong> If <code>HREADY = 0</code>, the slave does not provide valid data on <code>HRDATA</code> until the transfer is about to complete (when <code>HREADY</code> goes to 1)[cite: 1].</li>
+                        <li><strong>Write Transfer Wait:</strong> If <code>HREADY = 0</code>, the master must hold the data stable on <code>HWDATA</code> throughout the extended cycles[cite: 1].</li>
+                        <li>During a waited state, the master cannot change the phase from Data phase to Address phase until <code>HREADY = 1</code>[cite: 1].</li>
+                    </ul>
+                </section>
+
+                <!-- Section 5: Transfer Types -->
+                <section id="htrans" class="content-section">
+                    <h1>5. Transfer Types (HTRANS)</h1>
+                    <p>The 2-bit <code>HTRANS[1:0]</code> signal determines the type of transfer occurring on the bus[cite: 1].</p>
+
+                    <table class="table table-bordered mt-3">
+                        <thead class="table-light">
+                            <tr>
+                                <th>HTRANS[1:0]</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>00</code></td>
+                                <td><strong>IDLE</strong></td>
+                                <td>No data transfer is required[cite: 1]. Used when a Master does not want to perform a transfer[cite: 1]. Subordinates must provide a zero wait state OKAY response and ignore the transfer[cite: 1]. The master is permitted to change the address during IDLE transfers[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>01</code></td>
+                                <td><strong>BUSY</strong></td>
+                                <td>Indicates the master is busy and needs to insert idle cycles in the middle of a burst[cite: 1]. The burst continues, but the next transfer cannot happen immediately[cite: 1]. Subordinates must provide a zero wait state OKAY response[cite: 1]. The master can change from BUSY to any other transfer type when HREADY is LOW[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>10</code></td>
+                                <td><strong>NONSEQ</strong></td>
+                                <td>Indicates a single transfer or the first transfer of a burst[cite: 1]. The address and control signals are unrelated to the previous transfer[cite: 1].</td>
+                            </tr>
+                            <tr>
+                                <td><code>11</code></td>
+                                <td><strong>SEQ</strong></td>
+                                <td>Indicates the remaining transfers in a burst[cite: 1]. The address is related to the previous transfer[cite: 1].</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Section 6: Bursts -->
+                <section id="bursts" class="content-section">
+                    <h1>6. Burst Operations (HBURST)</h1>
+                    <p>Sending multiple data packets is called a burst[cite: 1]. The protocol supports single transfers, bursts of 4, 8, and 16 beats, and undefined length bursts[cite: 1]. It supports both incrementing and wrapping bursts[cite: 1].</p>
+
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>HBURST[2:0]</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>000</code></td><td>SINGLE</td><td>Single data packet transfer[cite: 1].</td></tr>
+                            <tr><td><code>001</code></td><td>INCR</td><td>Incrementing burst of undefined length[cite: 1].</td></tr>
+                            <tr><td><code>010</code></td><td>WRAP4</td><td>4-beat wrapping burst[cite: 1].</td></tr>
+                            <tr><td><code>011</code></td><td>INCR4</td><td>4-beat incrementing burst[cite: 1].</td></tr>
+                            <tr><td><code>100</code></td><td>WRAP8</td><td>8-beat wrapping burst[cite: 1].</td></tr>
+                            <tr><td><code>101</code></td><td>INCR8</td><td>8-beat incrementing burst[cite: 1].</td></tr>
+                            <tr><td><code>110</code></td><td>WRAP16</td><td>16-beat wrapping burst[cite: 1].</td></tr>
+                            <tr><td><code>111</code></td><td>INCR16</td><td>16-beat incrementing burst[cite: 1].</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h4 class="text-primary">Incrementing Bursts (INCR)</h4>
+                            <p>These bursts access sequential locations[cite: 1]. The address of each transfer in the burst is simply an increment of the previous address (Address of packet = Previous Address + Size)[cite: 1]. We keep increasing until the burst reaches its end[cite: 1].</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="text-danger">Wrapping Bursts (WRAP)</h4>
+                            <p>These bursts wrap when they cross an address boundary[cite: 1]. After reaching the boundary, the address wraps back to the initial starting address of that boundary block[cite: 1].</p>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box">
+                        <strong>Calculating Address Boundaries[cite: 1]:</strong><br>
+                        <code>Address Boundary = Number of Beats (HBURST) × Size of Transfer (HSIZE)</code>[cite: 1].<br>
+                        <em>Example:</em> A 4-beat wrapping burst (WRAP4) of word accesses (4-byte HSIZE) wraps at a 16-byte boundary (4 beats × 4 bytes = 16)[cite: 1]. If the start address is <code>0x34</code>, the 4 transfers will go to <code>0x34</code>, <code>0x38</code>, <code>0x3C</code>, and then wrap back to <code>0x30</code>[cite: 1]. In AHB, the starting address cannot be an unaligned address[cite: 1].
+                    </div>
+                </section>
+
+                <!-- Section 7: Responses -->
+                <section id="response" class="content-section">
+                    <h1>7. Subordinate Response (HRESP)</h1>
+                    <p>After any transaction, the slave sends its status to the master via the 1-bit <code>HRESP</code> signal[cite: 1].</p>
+
+                    <ul>
+                        <li><strong>0 = OKAY:</strong> The transfer has either completed successfully, or additional cycles are required for the subordinate to complete the request (pending)[cite: 1].</li>
+                        <li><strong>1 = ERROR:</strong> An error has occurred during the transfer, indicating it was unsuccessful[cite: 1]. A two-cycle response is required for an error condition, with <code>HREADY</code> being asserted in the second cycle[cite: 1].</li>
+                    </ul>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
