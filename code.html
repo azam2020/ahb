@@ -13,6 +13,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f8f9fa;
             color: #333;
+            line-height: 1.6;
         }
         .navbar {
             background-color: #0d6efd;
@@ -41,14 +42,14 @@
         }
         .content-section {
             background: #fff;
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             margin-bottom: 2rem;
         }
         h1, h2, h3 {
             color: #0d6efd;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
         h1 {
             font-size: 2.2rem;
@@ -58,7 +59,7 @@
         }
         h2 {
             font-size: 1.5rem;
-            margin-top: 1.5rem;
+            margin-top: 2rem;
             border-bottom: 1px dashed #e9ecef;
             padding-bottom: 0.25rem;
         }
@@ -68,15 +69,23 @@
             padding: 1.5rem;
             border-radius: 6px;
             overflow-x: auto;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             line-height: 1.4;
+            margin-top: 1rem;
         }
-        .highlight-box {
-            background-color: #e7f1ff;
-            border-left: 4px solid #0d6efd;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 0 4px 4px 0;
+        .explanation-box {
+            background-color: #fdfdfe;
+            border-left: 4px solid #198754;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            border-radius: 0 6px 6px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .explanation-title {
+            color: #198754;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
         }
         .table thead {
             background-color: #f1f3f5;
@@ -98,7 +107,7 @@
                         <a class="nav-link" href="index.html">Theory & Concepts</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="code.html">RTL Code & Testbench</a>
+                        <a class="nav-link active" aria-current="page" href="code.html">RTL Code & Walkthrough</a>
                     </li>
                 </ul>
             </div>
@@ -114,10 +123,12 @@
                 <div class="sidebar" id="toc-sidebar">
                     <h5 class="fw-bold mb-3">Code Sections</h5>
                     <nav class="nav nav-pills flex-column">
-                        <a class="nav-link" href="#master-module">1. Master Module</a>
-                        <a class="nav-link" href="#slave-module">2. Slave Module</a>
-                        <a class="nav-link" href="#testbench">3. Testbench</a>
-                        <a class="nav-link" href="#output-analysis">4. Step-by-Step Output</a>
+                        <a class="nav-link" href="#master-module">1. Master: Setup & FIFO</a>
+                        <a class="nav-link" href="#master-seq">2. Master: FSM & Address</a>
+                        <a class="nav-link" href="#master-comb">3. Master: Output Logic</a>
+                        <a class="nav-link" href="#slave-module">4. Slave Module</a>
+                        <a class="nav-link" href="#testbench">5. Testbench</a>
+                        <a class="nav-link" href="#output-analysis">6. Waveform Analysis</a>
                     </nav>
                 </div>
             </div>
@@ -125,20 +136,11 @@
             <!-- Content Area -->
             <div class="col-lg-9">
                 
-                <!-- 1. Master Module -->
+                <!-- 1. Master Module Setup -->
                 <section id="master-module" class="content-section">
-                    <h1>1. AHB Master Module (`master_ahb.v`)</h1>
-                    <p>The Master module acts as the initiator of all AHB transactions. This specific implementation includes an internal FIFO to buffer data from the user/testbench before driving it onto the AHB bus. It uses a Finite State Machine (FSM) to separate the <strong>Address Phase</strong> and <strong>Data Phase</strong> inherent to the AHB pipelined architecture.</p>
+                    <h1>1. Master Module: Setup & FIFO</h1>
+                    <p>The <code>master_ahb.v</code> file acts as the brain. It takes simple instructions from the user (like "Write these 4 words starting at Address X") and translates them into strict AHB protocol signals. <em>(Note: Stitching the code blocks in sections 1, 2, and 3 together creates your complete master_ahb.v file).</em></p>
                     
-                    <div class="highlight-box">
-                        <strong>Key Design Features:</strong>
-                        <ul>
-                            <li><strong>FSM states:</strong> <code>idle</code>, <code>write_state_address</code>, <code>write_state_data</code>, <code>read_state_address</code>, <code>read_state_data</code>.</li>
-                            <li><strong>Wrap Calculation Logic:</strong> Automatically calculates the wrap boundary (16 bytes for 4-beat words) and the <code>wrap_base</code> address by clearing the lower 4 bits of the starting address using bitwise operations (<code>addr_top & ~15</code>).</li>
-                            <li><strong>FIFO Buffer:</strong> A 15-deep memory array stores incoming data bursts.</li>
-                        </ul>
-                    </div>
-
 <pre><code>`timescale 1ns / 1ps
 
 module master_ahb(
@@ -188,17 +190,12 @@ module master_ahb(
     // FIFO signals for Write Operations
     reg [3:0] rd_ptr, wr_ptr;
     reg [31:0] mem [14:0];
-    
-    // Buffer to store incoming Read data
     reg [31:0] read_buffer [15:0]; 
     
-    // FIFO Status Flags
     assign fifo_empty = (wr_ptr == rd_ptr);
     assign fifo_full = ((wr_ptr == 14 ? 4'd0 : wr_ptr + 1'b1) == rd_ptr); 
     
-    // =========================================================
     // FIFO WRITE LOGIC (User pushing data into Master)
-    // =========================================================
     always @(posedge CLK_MASTER) begin
         if(RESET_MASTER) begin
             for(i = 0; i < 15; i = i+1) mem[i] <= 32'd0;
@@ -208,19 +205,27 @@ module master_ahb(
             mem[wr_ptr] <= data_top;
             wr_ptr <= (wr_ptr == 14) ? 4'd0 : wr_ptr + 1'b1;
         end
-    end
-    
-    // =========================================================
-    // SEQUENTIAL LOGIC (State, Address, and Data Updates)
-    // =========================================================
+    end</code></pre>
+
+                    <div class="explanation-box">
+                        <div class="explanation-title">How it works: The User Interface & FIFO</div>
+                        <p><strong>Why do we need a FIFO?</strong> In a high-speed system, the user (or testbench) might want to provide data faster than the bus can send it, especially if the Slave asks the Master to wait (HREADY = 0). By pushing user data into the <code>mem</code> array (the FIFO), the Master can safely store the data and pop it out onto the <code>HWDATA</code> bus precisely when the protocol allows.</p>
+                        <p><strong>FIFO Flags:</strong> <code>fifo_empty</code> and <code>fifo_full</code> prevent the user from underflowing or overflowing the memory array.</p>
+                    </div>
+                </section>
+
+                <!-- 2. Master FSM -->
+                <section id="master-seq" class="content-section">
+                    <h1>2. Master: FSM & Address Calculations</h1>
+                    <p>This sequential logic block updates the state machine and calculates the addresses. It handles the complex math required for <strong>wrapping bursts</strong>.</p>
+
+<pre><code>    // SEQUENTIAL LOGIC (State, Address, and Data Updates)
     always @(posedge CLK_MASTER) begin
         if(RESET_MASTER) begin
             present_state <= idle;
-            count <= 0;
-            rd_ptr <= 0;
+            count <= 0; rd_ptr <= 0;
             addr_internal <= 32'h0000_0000;
-            wrap_base <= 32'd0;
-            wrap_boundary <= 32'd0;
+            wrap_base <= 32'd0; wrap_boundary <= 32'd0;
             for(i = 0; i < 16; i = i+1) read_buffer[i] <= 32'd0;
         end
         else begin
@@ -233,9 +238,8 @@ module master_ahb(
                 
                 // Wrap Calculations
                 if (wrap_enb) begin
-                    // Wrap boundary = Hsize (4-Bytes) x Hburst (4) = 16-Bytes
-                    wrap_boundary <= 32'd16; 
-                    // Base Address = Starting Address & (~(wrap_size - 1))
+                    wrap_boundary <= 32'd16; // 4 Beats x 4 Bytes = 16 Bytes
+                    // Base Address = Starting Address & ~(15)
                     wrap_base <= addr_top & ~(32'd15); 
                 end
             end 
@@ -263,6 +267,7 @@ module master_ahb(
                 count <= count + 1'b1;
                 read_buffer[count] <= HRDATA; // Store slave data
                 
+                // Address incrementing logic (Identical to Write Phase)
                 if (count < beat_length - 1) begin
                     if (wrap_enb) begin
                         if ((addr_internal + 4) == (wrap_base + wrap_boundary))
@@ -275,11 +280,22 @@ module master_ahb(
                 end
             end
         end
-    end
-    
-    // =========================================================
-    // COMBINATIONAL LOGIC (Next State & Outputs)
-    // =========================================================
+    end</code></pre>
+
+                    <div class="explanation-box">
+                        <div class="explanation-title">How it works: Calculating Wraps & Pipeline Steps</div>
+                        <p><strong>The FSM:</strong> The master transitions from <code>idle</code> -> <code>address_phase</code> -> <code>data_phase</code>. Notice that the state and address counters only update <strong><code>if (HREADY)</code></strong>. If the slave pulls <code>HREADY</code> low, this entire block freezes, correctly executing a wait state!</p>
+                        <p><strong>Wrap Base Math:</strong> Look at <code>wrap_base &lt;= addr_top & ~(32'd15);</code>. This is bitwise magic. <code>15</code> in binary is <code>01111</code>. The NOT of that is <code>10000</code>. By doing a bitwise AND with the starting address, we force the last 4 bits to <code>0000</code>. This perfectly calculates the absolute base boundary of any 16-byte block.</p>
+                        <p><strong>The Loop:</strong> As the address increments by 4 (<code>addr_internal + 4</code>), it checks if it hits the ceiling (<code>wrap_base + 16</code>). If it does, instead of continuing to go up, it snaps back down to the <code>wrap_base</code>.</p>
+                    </div>
+                </section>
+
+                <!-- 3. Master Combinational -->
+                <section id="master-comb" class="content-section">
+                    <h1>3. Master: Output Logic (Combinational)</h1>
+                    <p>This block constantly evaluates the current state and drives the AHB output signals. This is where <code>HTRANS</code> changes from NONSEQ to SEQ.</p>
+
+<pre><code>    // COMBINATIONAL LOGIC (Next State & Outputs)
     always @(*) begin
         // Default assignments to prevent latches
         next_state = present_state;
@@ -329,7 +345,7 @@ module master_ahb(
             
             read_state_address: begin
                 HWRITE = 1'b0; 
-                HTRANS = 2'b10; // NONSEQ
+                HTRANS = 2'b10; // NONSEQ for the first beat
                 if (HREADY) next_state = read_state_data;
             end
             
@@ -351,20 +367,19 @@ module master_ahb(
     assign HADDR = addr_internal;
     
 endmodule</code></pre>
+
+                    <div class="explanation-box">
+                        <div class="explanation-title">How it works: Driving the Protocol</div>
+                        <p><strong>Default Values:</strong> We set defaults at the top of the block (like <code>HSIZE = 3'b010</code>) so that Vivado/Quartus doesn't create unwanted latches in our synthesized hardware.</p>
+                        <p><strong>The HTRANS Sequence:</strong> Look at <code>write_state_address</code>. <code>HTRANS</code> is explicitly set to <code>2'b10</code> (NONSEQ) because this is the first beat of a new burst. In the very next state (<code>write_state_data</code>), as long as we haven't reached the end of the burst (<code>count < beat_length - 1</code>), <code>HTRANS</code> changes to <code>2'b11</code> (SEQ).</p>
+                        <p><strong>HWDATA Mapping:</strong> In the data state, <code>HWDATA</code> is fed directly from <code>mem[rd_ptr]</code>. Because <code>rd_ptr</code> was advanced in the sequential block on the rising edge, fresh data naturally appears here every cycle.</p>
+                    </div>
                 </section>
 
-                <!-- 2. Slave Module -->
+                <!-- 4. Slave Module -->
                 <section id="slave-module" class="content-section">
-                    <h1>2. AHB Slave Module (`slave_ahb.v`)</h1>
-                    <p>This module implements a <strong>zero-wait state</strong> slave. It never pulls <code>HREADY</code> low, meaning it can handle incoming address phases and execute data phases in a seamless, back-to-back pipelined fashion.</p>
-
-                    <div class="highlight-box">
-                        <strong>Key Design Features:</strong>
-                        <ul>
-                            <li><strong>Pipelining:</strong> The slave samples <code>HTRANS</code>, <code>HWRITE</code>, and <code>HADDR</code> synchronously on the clock edge, storing them in internal registers. It acts upon these stored values in the <em>next</em> clock cycle, fulfilling the AHB requirement that the Data Phase occurs exactly one cycle after the Address Phase.</li>
-                            <li><strong>Dummy Read Data:</strong> For read operations, the slave outputs the bitwise inversion of the address (<code>~haddr_reg</code>) as dummy data. This makes it very easy to verify in a waveform viewer that the read was successful.</li>
-                        </ul>
-                    </div>
+                    <h1>4. AHB Slave Module (`slave_ahb.v`)</h1>
+                    <p>The slave is the component receiving the commands. To comply with the AHB pipeline rules, the slave must capture the control signals during the Address Phase, and act on them one clock cycle later in the Data Phase.</p>
 
 <pre><code>`timescale 1ns / 1ps
 
@@ -425,18 +440,18 @@ module slave_ahb(
     end
     
 endmodule</code></pre>
+                    <div class="explanation-box">
+                        <div class="explanation-title">How it works: The 1-Cycle Delay</div>
+                        <p><strong>The Register Trap:</strong> Notice the <code>always @(posedge HCLK)</code> block. It takes the incoming <code>HADDR</code> and saves it into <code>haddr_reg</code>. It does not act on it immediately. This is the essence of pipelining!</p>
+                        <p><strong>The Execution:</strong> In the <code>always @(*)</code> combinational block, the slave checks <code>htrans_reg</code> (the saved state from the previous cycle). If it is a valid write, the slave accepts <code>HWDATA</code>. If it is a valid read, the slave populates <code>HRDATA</code>. For testbench verification purposes, if you ask this slave to read an address, it will reply with the exact opposite (bitwise NOT) of that address.</p>
+                        <p><strong>Zero Wait States:</strong> This slave is incredibly fast. It permanently hardcodes <code>HREADY = 1'b1</code>, meaning it never asks the Master to pause.</p>
+                    </div>
                 </section>
 
-                <!-- 3. Testbench -->
+                <!-- 5. Testbench -->
                 <section id="testbench" class="content-section">
-                    <h1>3. AHB Testbench (`ahb_tb.v`)</h1>
-                    <p>The testbench wires the Master and Slave together, generates a 10ns clock, and applies sequential stimuli to trigger three distinct AHB scenarios:</p>
-                    <ol>
-                        <li>Filling the Master's FIFO with 8 words of data.</li>
-                        <li>An <code>INCR4</code> Write Burst starting at address <code>0x40</code>.</li>
-                        <li>A <code>WRAP4</code> Write Burst starting at address <code>0x04</code>.</li>
-                        <li>A <code>WRAP4</code> Read Burst starting at address <code>0x18</code>.</li>
-                    </ol>
+                    <h1>5. AHB Testbench (`ahb_tb.v`)</h1>
+                    <p>The testbench wires everything together. It acts as the "User", filling the Master's FIFO with data, and then commanding the Master to execute three different types of bursts.</p>
 
 <pre><code>`timescale 1ns / 1ps
 
@@ -453,17 +468,12 @@ module ahb_tb();
     
     // AHB Interconnect Wires
     wire hready, hresp;
-    wire [31:0] hrdata; 
-    wire [31:0] HADDR;
+    wire [31:0] hrdata, HADDR, HWDATA; 
     wire HWRITE;
-    wire [2:0] HSIZE;
-    wire [2:0] HBURST;
+    wire [2:0] HSIZE, HBURST;
     wire [1:0] HTRANS;
-    wire [31:0] HWDATA;
-    
     wire fifo_empty, fifo_full;
     
-    // Master Instantiation
     master_ahb dut1(
         .CLK_MASTER(clk), .RESET_MASTER(rst), .HREADY(hready), .HRDATA(hrdata),
         .data_top(data_top), .write_top(write_top), .beat_length(beat_length),
@@ -472,18 +482,15 @@ module ahb_tb();
         .HTRANS(HTRANS), .HWDATA(HWDATA), .fifo_empty(fifo_empty), .fifo_full(fifo_full)
     );
     
-    // Slave Instantiation
     slave_ahb dut2(
         .HCLK(clk), .HRESET(rst), .HADDR(HADDR), .HWRITE(HWRITE),
         .HSIZE(HSIZE), .HBURST(HBURST), .HTRANS(HTRANS), .HWDATA(HWDATA),
         .HREADY(hready), .HRESP(hresp), .HRDATA(hrdata)
     );
     
-    // Clock Generation (10ns Period)
     initial clk = 0;
     always #5 clk = ~clk;
         
-    // Simulation Stimulus
     initial begin
         // 1. INITIALIZE SYSTEM
         rst = 1; write_top = 0; data_top = 0; addr_top = 0;
@@ -531,10 +538,10 @@ module ahb_tb();
 endmodule</code></pre>
                 </section>
 
-                <!-- 4. Step-by-Step Output -->
+                <!-- 6. Step-by-Step Output -->
                 <section id="output-analysis" class="content-section">
-                    <h1>4. Step-by-Step Output Analysis</h1>
-                    <p>When you run the testbench in a waveform viewer (like Vivado or ModelSim), here is exactly what you will see happening cycle by cycle. Keep in mind the pipelined nature of AHB: the <strong>Data Phase</strong> for Beat N happens simultaneously with the <strong>Address Phase</strong> for Beat N+1.</p>
+                    <h1>6. Step-by-Step Waveform Analysis</h1>
+                    <p>If you put the testbench above into a simulator, here is exactly what the wave viewer will show. Notice how the Data Phase values always appear one step (one row) below the Address Phase that initiated them.</p>
 
                     <h2>Scenario 1: INCR4 Write Burst</h2>
                     <p><strong>Conditions:</strong> Start Address = <code>0x0000_0040</code>, <code>HBURST</code> = INCR4, <code>HWRITE</code> = 1.</p>
@@ -550,34 +557,40 @@ endmodule</code></pre>
                         <tbody>
                             <tr>
                                 <td>1</td>
-                                <td><code>0x40</code></td>
+                                <td class="text-primary"><code>0x40</code></td>
                                 <td><code>NONSEQ (10)</code></td>
-                                <td><code>0x1111_1111</code> (Next clock cycle)</td>
+                                <td><em>(Data from previous transaction)</em></td>
                             </tr>
                             <tr>
                                 <td>2</td>
-                                <td><code>0x44</code></td>
+                                <td class="text-primary"><code>0x44</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0x2222_2222</code></td>
+                                <td class="text-success"><code>0x1111_1111</code> (For address 0x40)</td>
                             </tr>
                             <tr>
                                 <td>3</td>
-                                <td><code>0x48</code></td>
+                                <td class="text-primary"><code>0x48</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0x3333_3333</code></td>
+                                <td class="text-success"><code>0x2222_2222</code> (For address 0x44)</td>
                             </tr>
                             <tr>
                                 <td>4</td>
-                                <td><code>0x4C</code></td>
+                                <td class="text-primary"><code>0x4C</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0x4444_4444</code></td>
+                                <td class="text-success"><code>0x3333_3333</code> (For address 0x48)</td>
+                            </tr>
+                            <tr>
+                                <td>-</td>
+                                <td><em>IDLE</em></td>
+                                <td><code>IDLE (00)</code></td>
+                                <td class="text-success"><code>0x4444_4444</code> (For address 0x4C)</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <h2>Scenario 2: WRAP4 Write Burst</h2>
+                    <h2 class="mt-5">Scenario 2: WRAP4 Write Burst</h2>
                     <p><strong>Conditions:</strong> Start Address = <code>0x0000_0004</code>, <code>HBURST</code> = WRAP4.</p>
-                    <p><em>Calculation:</em> With 4 beats of 4 bytes, the wrap boundary is 16 (<code>0x10</code>) bytes. The base address is <code>0x04 & ~0x0F = 0x00</code>. Wrapping occurs if the next address hits <code>0x00 + 0x10 = 0x10</code>.</p>
+                    <p><em>Calculation:</em> The base address block starts at <code>0x00</code> and ends at <code>0x10</code>. Because we start at <code>0x04</code>, we will hit the boundary ceiling at the 4th beat and snap back to <code>0x00</code>.</p>
                     <table class="table table-bordered text-center">
                         <thead>
                             <tr>
@@ -592,33 +605,38 @@ endmodule</code></pre>
                                 <td>1</td>
                                 <td><code>0x04</code></td>
                                 <td><code>NONSEQ (10)</code></td>
-                                <td><code>0xAAAA_AAAA</code> (Next clock cycle)</td>
+                                <td><em>(Idle Data)</em></td>
                             </tr>
                             <tr>
                                 <td>2</td>
                                 <td><code>0x08</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0xBBBB_BBBB</code></td>
+                                <td><code>0xAAAA_AAAA</code></td>
                             </tr>
                             <tr>
                                 <td>3</td>
                                 <td><code>0x0C</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0xCCCC_CCCC</code></td>
+                                <td><code>0xBBBB_BBBB</code></td>
                             </tr>
                             <tr class="table-warning">
                                 <td>4 (Wrap)</td>
-                                <td><code>0x00</code></td>
+                                <td><strong><code>0x00</code></strong></td>
                                 <td><code>SEQ (11)</code></td>
+                                <td><code>0xCCCC_CCCC</code></td>
+                            </tr>
+                            <tr>
+                                <td>-</td>
+                                <td><em>IDLE</em></td>
+                                <td><code>IDLE (00)</code></td>
                                 <td><code>0xDDDD_DDDD</code></td>
                             </tr>
                         </tbody>
                     </table>
-                    <p class="text-muted"><small><em>Note: Instead of going to 0x10, the address wraps back to the base address of 0x00.</em></small></p>
 
-                    <h2>Scenario 3: WRAP4 Read Burst</h2>
+                    <h2 class="mt-5">Scenario 3: WRAP4 Read Burst</h2>
                     <p><strong>Conditions:</strong> Start Address = <code>0x0000_0018</code>, <code>HBURST</code> = WRAP4, <code>HWRITE</code> = 0.</p>
-                    <p><em>Calculation:</em> The base address is <code>0x18 & ~0x0F = 0x10</code>. The wrap limit is <code>0x10 + 0x10 = 0x20</code>. The slave drives <code>HRDATA</code> with the bitwise NOT of the address.</p>
+                    <p><em>Calculation:</em> The base block starts at <code>0x10</code> and ends at <code>0x20</code>. The slave generates data by applying a bitwise NOT to the requested address.</p>
                     <table class="table table-bordered text-center">
                         <thead>
                             <tr>
@@ -633,24 +651,30 @@ endmodule</code></pre>
                                 <td>1</td>
                                 <td><code>0x18</code></td>
                                 <td><code>NONSEQ (10)</code></td>
-                                <td><code>0xFFFF_FFE7</code> (<code>~0x18</code>)</td>
+                                <td><em>(Idle Data)</em></td>
                             </tr>
                             <tr>
                                 <td>2</td>
                                 <td><code>0x1C</code></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0xFFFF_FFE3</code> (<code>~0x1C</code>)</td>
+                                <td><code>0xFFFF_FFE7</code> (<code>~0x18</code>)</td>
                             </tr>
                             <tr class="table-warning">
                                 <td>3 (Wrap)</td>
-                                <td><code>0x10</code></td>
+                                <td><strong><code>0x10</code></strong></td>
                                 <td><code>SEQ (11)</code></td>
-                                <td><code>0xFFFF_FFEF</code> (<code>~0x10</code>)</td>
+                                <td><code>0xFFFF_FFE3</code> (<code>~0x1C</code>)</td>
                             </tr>
                             <tr>
                                 <td>4</td>
                                 <td><code>0x14</code></td>
                                 <td><code>SEQ (11)</code></td>
+                                <td><code>0xFFFF_FFEF</code> (<code>~0x10</code>)</td>
+                            </tr>
+                            <tr>
+                                <td>-</td>
+                                <td><em>IDLE</em></td>
+                                <td><code>IDLE (00)</code></td>
                                 <td><code>0xFFFF_FFEB</code> (<code>~0x14</code>)</td>
                             </tr>
                         </tbody>
